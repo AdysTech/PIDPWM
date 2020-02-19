@@ -1,0 +1,19 @@
+{
+    "name":"PID_PWM",
+    "description":"PID Controller using RTOS timers, based on Brett Beauregard's blog posts",
+    "keywords":"pid,pwm,xtimer",
+    "authors":
+    {
+      "name": "Adarsha",
+      "maintainer": true
+    },
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/AdysTech/PIDPWM.git"
+    },
+    "version": "1.0.0",
+    "license": "MIT",
+    "frameworks": "arduino",
+    "platforms": ["espressif32"]
+  }
