@@ -1,9 +1,12 @@
 //Copyright @ Adys Tech
 //Author : mvadu@adystech.com
 //Based on http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
+#ifndef _PID_PWM_
+#define _PID_PWM_
 
 #include <functional>
 #include <Arduino.h>
+
 typedef std::function<double(void)> CurrentValueFunction;
 
 class PidPwm
@@ -43,3 +46,5 @@ private:
   PidParam _param;
   static void computeCallback(TimerHandle_t xTimer);
 };
+
+#endif //_PIDPWM_
