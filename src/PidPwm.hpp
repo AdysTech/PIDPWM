@@ -23,8 +23,11 @@ public:
   bool setTarget(double target);
   void setTuningParams(PidParam param);
   PidParam getTuningParams();
-  void setLimits(double minDS, double maxDS);
+  
+  //set the min and max duty cycle either in percentage (0-100 scale) or in raw PWM register values
+  void setLimitsPercentage(uint8_t minDS, uint8_t maxDS);
   void setLimits(uint32_t min, uint32_t max);
+
   double getTarget();
   double getCurrent();
   uint32_t getOutput();

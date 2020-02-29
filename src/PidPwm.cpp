@@ -123,10 +123,11 @@ void PidPwm::setLimits(uint32_t min, uint32_t max)
     _maxOut = max;
 }
 
-void PidPwm::setLimits(double minDS, double maxDS)
+void PidPwm::setLimitsPercentage(uint8_t minDS, uint8_t maxDS)
 {
-    _minOut = ((((uint32_t)1) << _pwmRes) - 1) * minDS;
-    _maxOut = ((((uint32_t)1) << _pwmRes) - 1) * maxDS;
+    uint32_t max_possible = (((uint32_t)1) << _pwmRes) - 1;
+    _minOut = minDS / 100.0 * max_possible;
+    _maxOut = maxDS / 100.0 * max_possible;
 }
 
 uint32_t PidPwm::getSamplePeriod()
