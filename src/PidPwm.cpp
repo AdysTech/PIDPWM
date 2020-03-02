@@ -152,7 +152,7 @@ uint32_t PidPwm::getOutput()
 
 double PidPwm::getOutputDS()
 {
-    return (((double)_outPwm) / ((((uint32_t)1) << _pwmRes) - 1));
+    return (_outPwm * 100.0 / ((((uint32_t)1) << _pwmRes) - 1));
 }
 
 void PidPwm::setComputeInterval(uint32_t ts)
