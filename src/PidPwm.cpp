@@ -40,6 +40,10 @@ void PidPwm::computeCallback(TimerHandle_t xTimer)
 {
     yield();
     PidPwm *pid = (PidPwm *)pvTimerGetTimerID(xTimer);
+
+    if(!pid->isRunning())
+        return;
+    
     uint32_t ts = millis();
     double current = pid->_curValFun();
     //make sure the current value function is fast enough. If not expand the interval with 100ms buffer.
