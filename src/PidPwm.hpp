@@ -48,6 +48,7 @@ private:
   TimerHandle_t _computeTimer;
   PidParam _param;
   static void computeCallback(TimerHandle_t xTimer);
+  unsigned long _invocationTime;
 };
 
 #endif //_PIDPWM_

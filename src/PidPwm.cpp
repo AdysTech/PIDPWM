@@ -14,26 +14,62 @@ PidPwm::PidPwm(uint8_t pwmPin, uint8_t channel, double freq, uint8_t resolution_
     _sp = NAN;
     _curValFun = onCompute;
     _cMax = criticalMax;
-    setTuningParams(param);
-
-    gpio_pad_select_gpio(pwmPin);
-    pinMode(pwmPin, OUTPUT);
-    ledcAttachPin(pwmPin, _pwmChannel);
-    ledcSetup(_pwmChannel, _pwmFrequency, _pwmRes);
-
     _outPwm = _minOut = 0;
     _maxOut = (((uint32_t)1) << _pwmRes) - 1;
-
-    //store current value
-    _lastVal = onCompute();
-
-    _computeTimer = xTimerCreate(
-        "pidComputeTimer",
-        pdMS_TO_TICKS(_computeInterval),
-        pdTRUE,
-        (void *)this,
-        computeCallback);
     _running = false;
+    setTuningParams(param);
+}
+
+bool PidPwm::begin()
+{
+    if (isnan(_sp))
+        return false;
+    if (!isRunning())
+    {
+
+        gpio_pad_select_gpio(_pin);
+        pinMode(_pin, OUTPUT);
+        ledcAttachPin(_pin, _pwmChannel);
+        ledcSetup(_pwmChannel, _pwmFrequency, _pwmRes);
+
+        _computeTimer = xTimerCreate(
+            "pidComputeTimer",
+            pdMS_TO_TICKS(_computeInterval),
+            pdTRUE,
+            (void *)this,
+            computeCallback);
+
+        //store current value
+        _lastVal = _curValFun();
+        xTimerStart(_computeTimer, 100);
+        _running = true;
+        _lastValTs = millis();
+        _intgErrSum = 0;
+        _outPwm = 0;
+    }
+    return true;
+}
+
+void PidPwm::shutdown()
+{
+    if (isRunning())
+    {
+        xTimerStop(_computeTimer, 0);
+        //ensure incase next timer callback gets called its not going to flip the pin
+        if (millis() > _invocationTime)
+        {
+            delay(_computeInterval - (millis() - _invocationTime));
+        }
+        else
+        {
+            delay(_computeInterval);
+        }
+        ledcWrite(_pwmChannel, _minOut);
+        ledcDetachPin(_pin);
+        gpio_reset_pin(_pin);
+        gpio_set_level(_pin, 0);
+        _running = false;
+    }
 }
 
 void PidPwm::computeCallback(TimerHandle_t xTimer)
@@ -41,15 +77,15 @@ void PidPwm::computeCallback(TimerHandle_t xTimer)
     yield();
     PidPwm *pid = (PidPwm *)pvTimerGetTimerID(xTimer);
 
-    if(!pid->isRunning())
+    if (!pid->isRunning())
         return;
-    
-    uint32_t ts = millis();
+
+    pid->_invocationTime = millis();
     double current = pid->_curValFun();
     //make sure the current value function is fast enough. If not expand the interval with 100ms buffer.
-    if (millis() - ts > pid->_computeInterval)
+    if (millis() > pid->_invocationTime && millis() - pid->_invocationTime > pid->_computeInterval)
     {
-        pid->setComputeInterval((millis() - ts) + 100);
+        pid->setComputeInterval((millis() - pid->_invocationTime) + 100);
     }
     if (!isnan(current))
     {
@@ -75,7 +111,7 @@ void PidPwm::computeCallback(TimerHandle_t xTimer)
         //store the last successful outcome of output
         if (dVal != 0)
         {
-            pid->_lastValTs = ts;
+            pid->_lastValTs = pid->_invocationTime;
         }
         //restrict the output to be within the maximum swing we can have with PWM out
         if (pid->_outPwm > pid->_maxOut)
@@ -84,7 +120,7 @@ void PidPwm::computeCallback(TimerHandle_t xTimer)
             pid->_outPwm = pid->_minOut;
         //detect stall or sensor failure conditions.
         //with at least 10% output, if no change is detected in current value over 10 sample periods shut down the output
-        if (pid->getOutputDS() > 0.1 && ts - pid->_lastValTs > 100 * pid->getSamplePeriod())
+        if (pid->getOutputDS() > 0.1 && pid->_invocationTime - pid->_lastValTs > 100 * pid->getSamplePeriod())
         {
             pid->_outPwm = pid->_minOut;
         }
@@ -174,33 +210,6 @@ void PidPwm::setComputeInterval(uint32_t ts)
                                10);
         }
     }
-}
-
-void PidPwm::shutdown()
-{
-    if (isRunning())
-    {
-        xTimerStop(_computeTimer, 0);
-        ledcWrite(_pwmChannel, 0);
-        digitalWrite(_pwmChannel, LOW);
-        _running = false;
-    }
-}
-
-bool PidPwm::begin()
-{
-    if (isnan(_sp))
-        return false;
-    if (!isRunning())
-    {
-        xTimerStart(_computeTimer, 100);
-        _running = true;
-        _lastValTs = millis();
-        _intgErrSum = 0;
-        _outPwm = 0;
-        _lastVal = 0;
-    }
-    return true;
 }
 
 bool PidPwm::isRunning()
